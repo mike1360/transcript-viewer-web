@@ -63,6 +63,7 @@ function App() {
   const [exportingClips, setExportingClips] = useState<Set<string>>(new Set()); // Track which clips are being exported
   const [exportStatus, setExportStatus] = useState<{clipId: string; message: string} | null>(null);
   const [selectedClipIds, setSelectedClipIds] = useState<Set<string>>(new Set()); // For bulk export
+  const [exportWithCaptions, setExportWithCaptions] = useState(true); // Toggle for burn-in captions
   const [showClipDialog, setShowClipDialog] = useState(false);
   const [clipName, setClipName] = useState('');
   const [editingClip, setEditingClip] = useState<Clip | null>(null);
@@ -631,6 +632,7 @@ function App() {
           startTime: clip.start_time,
           endTime: clip.end_time,
           clipName: clip.name,
+          withCaptions: exportWithCaptions,
         }),
       });
 
@@ -819,6 +821,14 @@ function App() {
                   </span>
                 </div>
                 <div className="clips-header-actions">
+                  <label className="captions-toggle" title="Burn transcript text into exported videos">
+                    <input
+                      type="checkbox"
+                      checked={exportWithCaptions}
+                      onChange={(e) => setExportWithCaptions(e.target.checked)}
+                    />
+                    <span>Captions</span>
+                  </label>
                   {selectedClipIds.size > 0 && (
                     <button onClick={handleBulkExport} className="btn-bulk-export">
                       Export {selectedClipIds.size} Clips

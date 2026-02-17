@@ -295,16 +295,52 @@ Order them by importance, most critical first.`,
   }
 });
 
+// Helper function to generate SRT subtitle file
+function generateSRT(lines, clipStartTime) {
+  let srtContent = '';
+  let index = 1;
+
+  for (const line of lines) {
+    if (!line.start_time || !line.end_time) continue;
+
+    // Adjust times relative to clip start
+    const startSec = line.start_time - clipStartTime;
+    const endSec = line.end_time - clipStartTime;
+
+    // Skip lines outside clip range
+    if (startSec < 0 || endSec < 0) continue;
+
+    // Format times as SRT format (HH:MM:SS,mmm)
+    const formatTime = (sec) => {
+      const hours = Math.floor(sec / 3600);
+      const minutes = Math.floor((sec % 3600) / 60);
+      const seconds = Math.floor(sec % 60);
+      const milliseconds = Math.floor((sec % 1) * 1000);
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(3, '0')}`;
+    };
+
+    const speaker = line.speaker ? `${line.speaker}: ` : '';
+    const text = `${speaker}${line.text}`;
+
+    srtContent += `${index}\n`;
+    srtContent += `${formatTime(startSec)} --> ${formatTime(endSec)}\n`;
+    srtContent += `${text}\n\n`;
+    index++;
+  }
+
+  return srtContent;
+}
+
 // Export video clip endpoint
 app.post('/api/export-clip', async (req, res) => {
   try {
-    const { startTime, endTime, clipName } = req.body;
+    const { startTime, endTime, clipName, withCaptions } = req.body;
 
     if (!startTime || !endTime || !clipName) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    console.log(`Exporting clip: ${clipName} (${startTime}s - ${endTime}s)`);
+    console.log(`Exporting clip: ${clipName} (${startTime}s - ${endTime}s)${withCaptions ? ' with captions' : ''}`);
 
     // Use Cloudinary URL in production, local file in development
     const sourceVideo = process.env.NODE_ENV === 'production'
@@ -326,24 +362,60 @@ app.post('/api/export-clip', async (req, res) => {
     const sanitizedName = clipName.replace(/[^a-z0-9]/gi, '_');
     const outputPath = path.join(exportsDir, `${sanitizedName}_${Date.now()}.mp4`);
 
+    let srtPath = null;
+
+    // Generate SRT file if captions requested
+    if (withCaptions && projectData) {
+      const clipLines = projectData.transcriptLines.filter(
+        line => line.start_time >= startTime && line.end_time <= endTime
+      );
+      const srtContent = generateSRT(clipLines, startTime);
+      srtPath = path.join(exportsDir, `${sanitizedName}_${Date.now()}.srt`);
+      fs.writeFileSync(srtPath, srtContent, 'utf8');
+      console.log(`✓ SRT file generated: ${srtPath}`);
+    }
+
     // Extract video segment using ffmpeg (works with URLs or local files)
     await new Promise((resolve, reject) => {
-      ffmpeg(sourceVideo)
+      const command = ffmpeg(sourceVideo)
         .setStartTime(startTime)
         .setDuration(duration)
         .output(outputPath)
-        .videoCodec('libx264') // Re-encode for compatibility (can't use 'copy' with remote URLs)
+        .videoCodec('libx264')
         .audioCodec('aac')
         .outputOptions([
           '-preset fast',
           '-crf 23'
-        ])
+        ]);
+
+      // Burn in subtitles if SRT file exists
+      if (srtPath) {
+        // Escape path for Windows compatibility
+        const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+        command.videoFilters({
+          filter: 'subtitles',
+          options: {
+            filename: escapedSrtPath,
+            force_style: 'FontName=Arial,FontSize=20,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=2,Shadow=1,MarginV=30'
+          }
+        });
+      }
+
+      command
         .on('end', () => {
           console.log(`✓ Clip exported: ${outputPath}`);
+          // Clean up SRT file
+          if (srtPath && fs.existsSync(srtPath)) {
+            fs.unlinkSync(srtPath);
+          }
           resolve();
         })
         .on('error', (err) => {
           console.error('FFmpeg error:', err);
+          // Clean up SRT file on error
+          if (srtPath && fs.existsSync(srtPath)) {
+            fs.unlinkSync(srtPath);
+          }
           reject(err);
         })
         .run();
