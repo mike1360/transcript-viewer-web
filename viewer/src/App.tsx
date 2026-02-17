@@ -192,7 +192,7 @@ function App() {
   const generateThumbnail = async (clip: Clip): Promise<string> => {
     return new Promise((resolve) => {
       const video = document.createElement('video');
-      video.src = 'https://res.cloudinary.com/dpunimzip/video/upload/SK11092007_1min_mqmey7.mp4';
+      video.src = 'https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4';
       video.crossOrigin = 'anonymous';
 
       video.addEventListener('loadeddata', () => {
@@ -656,7 +656,7 @@ function App() {
             ref={videoRef}
             controls
             onTimeUpdate={handleTimeUpdate}
-            src="https://res.cloudinary.com/dpunimzip/video/upload/SK11092007_1min_mqmey7.mp4"
+            src="https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4"
           >
             Your browser does not support video playback.
           </video>
