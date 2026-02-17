@@ -45,7 +45,6 @@ interface ProjectData {
 function App() {
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(0);
   const [activeLine, setActiveLine] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
@@ -378,7 +377,7 @@ function App() {
     if (!searchQuery) return text;
 
     const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
-    return parts.map((part, i) =>
+    return parts.map((part, _i) =>
       part.toLowerCase() === searchQuery.toLowerCase()
         ? `<mark>${part}</mark>`
         : part
