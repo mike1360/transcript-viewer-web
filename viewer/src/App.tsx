@@ -97,7 +97,6 @@ function App() {
   const handleTimeUpdate = () => {
     if (!videoRef.current || !project) return;
     const time = videoRef.current.currentTime;
-    setCurrentTime(time);
 
     // If playing a clip, stop when reaching end time
     if (playingClip && time >= playingClip.end_time) {

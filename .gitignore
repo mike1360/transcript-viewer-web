@@ -9,7 +9,5 @@ viewer/node_modules/
 viewer/dist/
 viewer/.env
 
-# Large video files (too big for GitHub)
-*.mp4
-sample-video.mp4
-viewer/public/sample-video.mp4
+# Large video files (too big for GitHub without LFS)
+# Note: sample-video.mp4 is tracked via Git LFS
