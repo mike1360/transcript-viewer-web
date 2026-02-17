@@ -665,18 +665,18 @@ function App() {
           {project.clips.length > 0 && (
             <div className="clips-section">
               <div className="clips-header">
-                <h3>Clips ({project.clips.length})</h3>
+                <h3>Clip List</h3>
                 {playingClip && (
                   <button onClick={handleStopClip} className="btn-stop-clip">
                     Stop Clip
                   </button>
                 )}
               </div>
-              <div className="clips-grid">
+              <div className="clips-list">
                 {project.clips.map(clip => (
                   <div
                     key={clip.clip_id}
-                    className={`clip-card ${selectedClip?.clip_id === clip.clip_id ? 'active' : ''} ${
+                    className={`clip-row ${selectedClip?.clip_id === clip.clip_id ? 'active' : ''} ${
                       playingClip?.clip_id === clip.clip_id ? 'playing' : ''
                     }`}
                   >
@@ -689,31 +689,42 @@ function App() {
                         <div className="clip-overlay">▶</div>
                       </div>
                     )}
-                    <div className="clip-info">
-                      <p className="clip-name">{clip.name}</p>
-                      <div className="clip-actions">
-                        <button
-                          onClick={(e) => handleStartRename(clip, e)}
-                          title="Rename"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={(e) => handleExportClip(clip, e)}
-                          title="Export"
-                        >
-                          💾
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDeleteConfirm(clip.clip_id);
-                          }}
-                          title="Delete"
-                        >
-                          🗑️
-                        </button>
+                    <div className="clip-details">
+                      <div className="clip-name-row">
+                        <span className="clip-name">{clip.name}</span>
+                        <span className="clip-duration">{Math.round(clip.end_time - clip.start_time)}s</span>
                       </div>
+                      <div className="clip-meta">
+                        <span className="clip-pages">
+                          Page {clip.start_page}:{clip.start_line} - {clip.end_page}:{clip.end_line}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="clip-actions">
+                      <button
+                        onClick={(e) => handleStartRename(clip, e)}
+                        className="clip-action-btn"
+                        title="Rename"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={(e) => handleExportClip(clip, e)}
+                        className="clip-action-btn"
+                        title="Export"
+                      >
+                        💾
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDeleteConfirm(clip.clip_id);
+                        }}
+                        className="clip-action-btn clip-delete-btn"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
                     </div>
                     {showDeleteConfirm === clip.clip_id && (
                       <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
