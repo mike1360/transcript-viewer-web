@@ -62,6 +62,7 @@ function App() {
   const [isResizingVertical, setIsResizingVertical] = useState(false);
   const [exportingClips, setExportingClips] = useState<Set<string>>(new Set()); // Track which clips are being exported
   const [exportStatus, setExportStatus] = useState<{clipId: string; message: string} | null>(null);
+  const [selectedClipIds, setSelectedClipIds] = useState<Set<string>>(new Set()); // For bulk export
   const [showClipDialog, setShowClipDialog] = useState(false);
   const [clipName, setClipName] = useState('');
   const [editingClip, setEditingClip] = useState<Clip | null>(null);
@@ -569,13 +570,56 @@ function App() {
     setEditingClip(null);
   };
 
-  // Export clip as video file
-  const handleExportClip = async (clip: Clip, e: React.MouseEvent) => {
+  // Toggle clip selection for bulk export
+  const toggleClipSelection = (clipId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
+    setSelectedClipIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clipId)) {
+        next.delete(clipId);
+      } else {
+        next.add(clipId);
+      }
+      return next;
+    });
+  };
 
-    // Mark this clip as exporting
+  // Select/deselect all clips
+  const toggleSelectAll = () => {
+    if (selectedClipIds.size === project?.clips.length) {
+      setSelectedClipIds(new Set());
+    } else {
+      setSelectedClipIds(new Set(project?.clips.map(c => c.clip_id) || []));
+    }
+  };
+
+  // Bulk export selected clips
+  const handleBulkExport = async () => {
+    if (!project || selectedClipIds.size === 0) return;
+
+    const clipsToExport = project.clips.filter(c => selectedClipIds.has(c.clip_id));
+
+    for (let i = 0; i < clipsToExport.length; i++) {
+      const clip = clipsToExport[i];
+      setExportStatus({
+        clipId: clip.clip_id,
+        message: `Exporting ${i + 1}/${clipsToExport.length}...`
+      });
+
+      // Export without UI event
+      await exportClipInternal(clip);
+
+      // Small delay between exports
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    setSelectedClipIds(new Set());
+    setExportStatus(null);
+  };
+
+  // Internal export function (no UI event)
+  const exportClipInternal = async (clip: Clip) => {
     setExportingClips(prev => new Set(prev).add(clip.clip_id));
-    setExportStatus({ clipId: clip.clip_id, message: 'Preparing export...' });
 
     try {
       const response = await fetch('/api/export-clip', {
@@ -594,9 +638,6 @@ function App() {
         throw new Error('Export failed');
       }
 
-      setExportStatus({ clipId: clip.clip_id, message: 'Downloading...' });
-
-      // Get the video file as a blob
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -604,21 +645,31 @@ function App() {
       a.download = `${clip.name.replace(/[^a-z0-9]/gi, '_')}.mp4`;
       a.click();
       URL.revokeObjectURL(url);
-
-      // Success!
-      setExportStatus({ clipId: clip.clip_id, message: '✓ Export complete!' });
-      setTimeout(() => setExportStatus(null), 3000);
     } catch (error) {
       console.error('Export error:', error);
-      setExportStatus({ clipId: clip.clip_id, message: '✗ Export failed' });
-      setTimeout(() => setExportStatus(null), 3000);
+      throw error;
     } finally {
-      // Remove from exporting set
       setExportingClips(prev => {
         const next = new Set(prev);
         next.delete(clip.clip_id);
         return next;
       });
+    }
+  };
+
+  // Export clip as video file (with UI feedback)
+  const handleExportClip = async (clip: Clip, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    setExportStatus({ clipId: clip.clip_id, message: 'Preparing export...' });
+
+    try {
+      await exportClipInternal(clip);
+      setExportStatus({ clipId: clip.clip_id, message: '✓ Export complete!' });
+      setTimeout(() => setExportStatus(null), 3000);
+    } catch (error) {
+      setExportStatus({ clipId: clip.clip_id, message: '✗ Export failed' });
+      setTimeout(() => setExportStatus(null), 3000);
     }
   };
 
@@ -752,16 +803,33 @@ function App() {
             <div className="clips-section">
               <div className="clips-header">
                 <div className="clips-title-group">
-                  <h3>Clip List</h3>
+                  <div className="clips-title-row">
+                    <input
+                      type="checkbox"
+                      checked={selectedClipIds.size === project.clips.length && project.clips.length > 0}
+                      onChange={toggleSelectAll}
+                      className="clip-select-all"
+                      title="Select all clips"
+                    />
+                    <h3>Clip List</h3>
+                  </div>
                   <span className="clips-stats">
                     {project.stats.totalClips} clips • {project.stats.alignedLines}/{project.stats.totalLines} synced
+                    {selectedClipIds.size > 0 && ` • ${selectedClipIds.size} selected`}
                   </span>
                 </div>
-                {playingClip && (
-                  <button onClick={handleStopClip} className="btn-stop-clip">
-                    Stop Clip
-                  </button>
-                )}
+                <div className="clips-header-actions">
+                  {selectedClipIds.size > 0 && (
+                    <button onClick={handleBulkExport} className="btn-bulk-export">
+                      Export {selectedClipIds.size} Clips
+                    </button>
+                  )}
+                  {playingClip && (
+                    <button onClick={handleStopClip} className="btn-stop-clip">
+                      Stop Clip
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="clips-list">
                 {project.clips.map(clip => (
@@ -769,8 +837,16 @@ function App() {
                     key={clip.clip_id}
                     className={`clip-row ${selectedClip?.clip_id === clip.clip_id ? 'active' : ''} ${
                       playingClip?.clip_id === clip.clip_id ? 'playing' : ''
-                    }`}
+                    } ${selectedClipIds.has(clip.clip_id) ? 'selected' : ''}`}
                   >
+                    <input
+                      type="checkbox"
+                      checked={selectedClipIds.has(clip.clip_id)}
+                      onChange={(e) => toggleClipSelection(clip.clip_id, e)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="clip-checkbox"
+                      title="Select for bulk export"
+                    />
                     {clipThumbnails[clip.clip_id] && (
                       <div
                         className="clip-thumbnail"
