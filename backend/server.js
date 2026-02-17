@@ -312,7 +312,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve React app for all other routes (must be last)
-app.get('*', (req, res) => {
+app.get('/(.*)', (req, res) => {
   res.sendFile(path.join(__dirname, '../viewer/dist/index.html'));
 });
 
