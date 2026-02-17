@@ -477,9 +477,14 @@ function App() {
     const firstLine = lines[0];
     const lastLine = lines[lines.length - 1];
 
+    // Generate readable clip name with proper pluralization
+    const clipName = firstLine.page === lastLine.page
+      ? `Page ${firstLine.page}:${firstLine.line_number} - ${lastLine.line_number}`
+      : `Pages ${firstLine.page}:${firstLine.line_number} - ${lastLine.page}:${lastLine.line_number}`;
+
     const newClip: Clip = {
       clip_id: `clip_${Date.now()}`,
-      name: `Page${firstLine.page}_Lines${firstLine.line_number}-${lastLine.line_number}`,
+      name: clipName,
       start_page: firstLine.page,
       end_page: lastLine.page,
       start_line: firstLine.line_number,
