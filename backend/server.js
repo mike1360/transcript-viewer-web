@@ -437,6 +437,115 @@ app.post('/api/export-clip', async (req, res) => {
   }
 });
 
+// Behavioral Analysis endpoint
+app.post('/api/analyze-behavior', async (req, res) => {
+  try {
+    const { timestamps } = req.body;
+
+    if (!timestamps || !Array.isArray(timestamps) || timestamps.length === 0) {
+      return res.status(400).json({ error: 'Missing timestamps array' });
+    }
+
+    console.log(`Analyzing behavior at ${timestamps.length} timestamps...`);
+
+    // For MVP, we'll analyze based on video URL frames
+    // In production, you'd extract actual video frames
+    const videoUrl = process.env.NODE_ENV === 'production'
+      ? 'https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4'
+      : 'sample-video.mp4';
+
+    const analyses = [];
+
+    for (const timestamp of timestamps) {
+      // Create a frame URL (Cloudinary can generate video thumbnails)
+      const frameUrl = `https://res.cloudinary.com/dpunimzip/video/upload/so_${Math.floor(timestamp)}.0/sample-video-compressed_gkmwk9.jpg`;
+
+      try {
+        // Use GPT-4 Vision to analyze the frame
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a behavioral analysis assistant for legal depositions. Analyze the witness's body language, facial expressions, and demeanor objectively.
+
+Focus on:
+- Eye contact (direct, avoidant, shifting)
+- Facial expressions (relaxed, tense, micro-expressions)
+- Posture (open, closed, leaning forward/back)
+- Hand gestures (still, fidgeting, defensive positions)
+- Overall demeanor (confident, nervous, defensive, calm)
+
+Return a JSON object:
+{
+  "summary": "2-3 sentence objective description",
+  "indicators": [
+    {"type": "positive/negative/neutral", "description": "specific observable behavior"}
+  ],
+  "confidence": "high/medium/low"
+}`
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze the witness's behavior at timestamp ${Math.floor(timestamp / 60)}:${(timestamp % 60).toFixed(0).padStart(2, '0')}`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: frameUrl
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.3
+        });
+
+        const aiResponse = completion.choices[0].message.content;
+
+        // Try to parse JSON response
+        let analysis = null;
+        try {
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysis = JSON.parse(jsonMatch[0]);
+          }
+        } catch (parseErr) {
+          console.error('Failed to parse behavior analysis:', parseErr);
+          analysis = {
+            summary: aiResponse,
+            indicators: [],
+            confidence: 'medium'
+          };
+        }
+
+        analyses.push({
+          timestamp,
+          ...analysis,
+          frameUrl
+        });
+
+        console.log(`✓ Analyzed timestamp ${timestamp}s`);
+      } catch (frameError) {
+        console.error(`Failed to analyze frame at ${timestamp}:`, frameError.message);
+        // Continue with other frames even if one fails
+      }
+
+      // Small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    res.json({ analyses });
+  } catch (error) {
+    console.error('Behavioral analysis error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({

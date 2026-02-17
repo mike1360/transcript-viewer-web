@@ -50,10 +50,11 @@ function App() {
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
   const [playingClip, setPlayingClip] = useState<Clip | null>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [aiMode, setAIMode] = useState<'search' | 'summary' | null>(null);
+  const [aiMode, setAIMode] = useState<'search' | 'summary' | 'behavior' | null>(null);
   const [aiQuery, setAIQuery] = useState('');
   const [aiResults, setAIResults] = useState<any[]>([]);
   const [aiKeyFacts, setAIKeyFacts] = useState<any[]>([]);
+  const [behavioralAnalysis, setBehavioralAnalysis] = useState<any[]>([]);
   const [aiLoading, setAILoading] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [splitPosition, setSplitPosition] = useState(50); // horizontal split percentage
@@ -474,6 +475,59 @@ function App() {
     } catch (error) {
       console.error('AI key facts error:', error);
       alert('Failed to generate key facts. Please try again.');
+    } finally {
+      setAILoading(false);
+    }
+  };
+
+  // Behavioral Analysis
+  const handleAnalyzeBehavior = async () => {
+    if (!project) return;
+
+    setAIMode('behavior');
+    setShowAIPanel(true);
+    setBehavioralAnalysis([]);
+    setAILoading(true);
+
+    try {
+      // Sample timestamps from key facts if available, otherwise sample every 3 minutes
+      let timestamps: number[] = [];
+
+      if (aiKeyFacts.length > 0) {
+        // Use key facts timestamps
+        timestamps = aiKeyFacts
+          .filter(fact => fact.startTime)
+          .map(fact => fact.startTime)
+          .slice(0, 8); // Limit to 8 analyses to control cost
+      } else {
+        // Sample every 3 minutes across video duration
+        const duration = videoRef.current?.duration || 2000;
+        const interval = 180; // 3 minutes
+        for (let t = 60; t < duration; t += interval) {
+          timestamps.push(t);
+          if (timestamps.length >= 8) break;
+        }
+      }
+
+      console.log('Analyzing behavior at timestamps:', timestamps);
+
+      const response = await fetch('/api/analyze-behavior', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ timestamps }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Behavioral analysis failed');
+      }
+
+      const data = await response.json();
+      setBehavioralAnalysis(data.analyses || []);
+    } catch (error) {
+      console.error('Behavioral analysis error:', error);
+      alert('Failed to analyze behavior. Please try again.');
     } finally {
       setAILoading(false);
     }
@@ -1033,29 +1087,70 @@ function App() {
               </div>
 
               <div className="ai-controls">
-                <div className="ai-search-box">
-                  <input
-                    type="text"
-                    placeholder="Ask a question..."
-                    value={aiQuery}
-                    onChange={(e) => setAIQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !aiLoading && handleAISearch()}
-                    className="ai-search-input"
-                    disabled={aiLoading}
-                  />
-                  <button onClick={handleAISearch} className="ai-search-btn" disabled={aiLoading}>
-                    {aiLoading && aiMode === 'search' ? 'Searching...' : 'Search'}
+                <div className="ai-tabs">
+                  <button
+                    onClick={() => setAIMode('search')}
+                    className={`ai-tab ${aiMode === 'search' ? 'active' : ''}`}
+                  >
+                    Search
+                  </button>
+                  <button
+                    onClick={() => setAIMode('summary')}
+                    className={`ai-tab ${aiMode === 'summary' ? 'active' : ''}`}
+                  >
+                    Key Facts
+                  </button>
+                  <button
+                    onClick={() => setAIMode('behavior')}
+                    className={`ai-tab ${aiMode === 'behavior' ? 'active' : ''}`}
+                  >
+                    Behavior
                   </button>
                 </div>
-                <button onClick={handleGenerateSummary} className="ai-summary-btn" disabled={aiLoading}>
-                  {aiLoading && aiMode === 'summary' ? 'Analyzing...' : 'Generate Key Facts'}
-                </button>
+
+                {aiMode === 'search' && (
+                  <div className="ai-search-box">
+                    <input
+                      type="text"
+                      placeholder="Ask a question..."
+                      value={aiQuery}
+                      onChange={(e) => setAIQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !aiLoading && handleAISearch()}
+                      className="ai-search-input"
+                      disabled={aiLoading}
+                    />
+                    <button onClick={handleAISearch} className="ai-search-btn" disabled={aiLoading}>
+                      {aiLoading ? 'Searching...' : 'Search'}
+                    </button>
+                  </div>
+                )}
+
+                {aiMode === 'summary' && (
+                  <button onClick={handleGenerateSummary} className="ai-summary-btn" disabled={aiLoading}>
+                    {aiLoading ? 'Analyzing...' : 'Generate Key Facts'}
+                  </button>
+                )}
+
+                {aiMode === 'behavior' && (
+                  <div className="ai-behavior-controls">
+                    <p className="behavior-description">
+                      AI-powered analysis of witness body language, facial expressions, and demeanor.
+                    </p>
+                    <button onClick={handleAnalyzeBehavior} className="ai-behavior-btn" disabled={aiLoading}>
+                      {aiLoading ? 'Analyzing Behavior...' : 'Analyze Deposition'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {aiLoading && (
                 <div className="ai-loading">
                   <div className="loading-spinner"></div>
-                  <p>{aiMode === 'search' ? 'Searching with AI...' : 'Generating summary...'}</p>
+                  <p>
+                    {aiMode === 'search' && 'Searching with AI...'}
+                    {aiMode === 'summary' && 'Generating key facts...'}
+                    {aiMode === 'behavior' && 'Analyzing witness behavior...'}
+                  </p>
                 </div>
               )}
 
@@ -1171,6 +1266,63 @@ function App() {
                           disabled={!fact.startTime}
                         >
                           Save as Clip
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!aiLoading && aiMode === 'behavior' && behavioralAnalysis.length > 0 && (
+                <div className="ai-results">
+                  <h4>Behavioral Analysis ({behavioralAnalysis.length} moments)</h4>
+                  <div className="behavior-disclaimer">
+                    ⚠️ <strong>Legal Disclaimer:</strong> This AI analysis is for reference only and should not be considered expert testimony.
+                    Behavioral indicators do not definitively prove truthfulness or deception. Cultural differences, medical conditions,
+                    and neurodivergence can affect body language. Consult with qualified behavioral analysts or psychologists for expert opinions.
+                  </div>
+                  {behavioralAnalysis.map((analysis, i) => (
+                    <div key={i} className="behavior-card">
+                      <div className="behavior-header">
+                        <span className="behavior-timestamp">
+                          {Math.floor(analysis.timestamp / 60)}:{(analysis.timestamp % 60).toFixed(0).padStart(2, '0')}
+                        </span>
+                        <span className={`behavior-confidence ${analysis.confidence}`}>
+                          {analysis.confidence} confidence
+                        </span>
+                      </div>
+                      {analysis.frameUrl && (
+                        <img src={analysis.frameUrl} alt="Video frame" className="behavior-frame" />
+                      )}
+                      <p className="behavior-summary">{analysis.summary}</p>
+                      {analysis.indicators && analysis.indicators.length > 0 && (
+                        <div className="behavior-indicators">
+                          <strong>Observed Behaviors:</strong>
+                          <ul>
+                            {analysis.indicators.map((indicator: any, idx: number) => (
+                              <li key={idx} className={`indicator-${indicator.type}`}>
+                                <span className={`indicator-badge ${indicator.type}`}>
+                                  {indicator.type === 'positive' && '✓'}
+                                  {indicator.type === 'negative' && '!'}
+                                  {indicator.type === 'neutral' && '○'}
+                                </span>
+                                {indicator.description}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="behavior-actions">
+                        <button
+                          onClick={() => {
+                            if (videoRef.current) {
+                              videoRef.current.currentTime = analysis.timestamp;
+                              videoRef.current.play();
+                            }
+                          }}
+                          className="ai-action-btn"
+                        >
+                          Play Video
                         </button>
                       </div>
                     </div>
