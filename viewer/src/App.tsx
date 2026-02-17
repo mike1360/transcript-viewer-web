@@ -64,6 +64,7 @@ function App() {
   const [exportStatus, setExportStatus] = useState<{clipId: string; message: string} | null>(null);
   const [selectedClipIds, setSelectedClipIds] = useState<Set<string>>(new Set()); // For bulk export
   const [exportWithCaptions, setExportWithCaptions] = useState(true); // Toggle for burn-in captions
+  const [bulkExportProgress, setBulkExportProgress] = useState<{current: number; total: number} | null>(null); // For progress bar
   const [showClipDialog, setShowClipDialog] = useState(false);
   const [clipName, setClipName] = useState('');
   const [editingClip, setEditingClip] = useState<Clip | null>(null);
@@ -600,8 +601,11 @@ function App() {
 
     const clipsToExport = project.clips.filter(c => selectedClipIds.has(c.clip_id));
 
+    setBulkExportProgress({ current: 0, total: clipsToExport.length });
+
     for (let i = 0; i < clipsToExport.length; i++) {
       const clip = clipsToExport[i];
+      setBulkExportProgress({ current: i + 1, total: clipsToExport.length });
       setExportStatus({
         clipId: clip.clip_id,
         message: `Exporting ${i + 1}/${clipsToExport.length}...`
@@ -616,6 +620,7 @@ function App() {
 
     setSelectedClipIds(new Set());
     setExportStatus(null);
+    setBulkExportProgress(null);
   };
 
   // Internal export function (no UI event)
@@ -816,7 +821,7 @@ function App() {
                     <h3>Clip List</h3>
                   </div>
                   <span className="clips-stats">
-                    {project.stats.totalClips} clips • {project.stats.alignedLines}/{project.stats.totalLines} synced
+                    {project.stats.totalClips} clips
                     {selectedClipIds.size > 0 && ` • ${selectedClipIds.size} selected`}
                   </span>
                 </div>
@@ -841,6 +846,19 @@ function App() {
                   )}
                 </div>
               </div>
+              {bulkExportProgress && (
+                <div className="bulk-export-progress">
+                  <div className="progress-text">
+                    Exporting {bulkExportProgress.current} of {bulkExportProgress.total} clips...
+                  </div>
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-fill"
+                      style={{ width: `${(bulkExportProgress.current / bulkExportProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="clips-list">
                 {project.clips.map(clip => (
                   <div
