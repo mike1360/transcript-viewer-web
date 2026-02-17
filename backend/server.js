@@ -312,7 +312,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve React app for all other routes (must be last)
-app.get('/(.*)', (req, res) => {
+// Express 5 compatible: use middleware instead of wildcard route
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../viewer/dist/index.html'));
 });
 
