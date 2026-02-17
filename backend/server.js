@@ -298,7 +298,7 @@ Order them by importance, most critical first.`,
 // Export video clip endpoint
 app.post('/api/export-clip', async (req, res) => {
   try {
-    const { startTime, endTime, clipName, videoPath } = req.body;
+    const { startTime, endTime, clipName } = req.body;
 
     if (!startTime || !endTime || !clipName) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -306,10 +306,13 @@ app.post('/api/export-clip', async (req, res) => {
 
     console.log(`Exporting clip: ${clipName} (${startTime}s - ${endTime}s)`);
 
-    // Default video path - can be overridden
-    const sourceVideo = videoPath || path.join(__dirname, '../viewer/public/sample-video.mp4');
+    // Use Cloudinary URL in production, local file in development
+    const sourceVideo = process.env.NODE_ENV === 'production'
+      ? 'https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4'
+      : path.join(__dirname, '../viewer/public/sample-video.mp4');
 
-    if (!fs.existsSync(sourceVideo)) {
+    // For local files, check if they exist
+    if (!sourceVideo.startsWith('http') && !fs.existsSync(sourceVideo)) {
       return res.status(404).json({ error: 'Source video not found' });
     }
 
@@ -323,14 +326,18 @@ app.post('/api/export-clip', async (req, res) => {
     const sanitizedName = clipName.replace(/[^a-z0-9]/gi, '_');
     const outputPath = path.join(exportsDir, `${sanitizedName}_${Date.now()}.mp4`);
 
-    // Extract video segment using ffmpeg
+    // Extract video segment using ffmpeg (works with URLs or local files)
     await new Promise((resolve, reject) => {
       ffmpeg(sourceVideo)
         .setStartTime(startTime)
         .setDuration(duration)
         .output(outputPath)
-        .videoCodec('copy') // Fast copy without re-encoding
-        .audioCodec('copy')
+        .videoCodec('libx264') // Re-encode for compatibility (can't use 'copy' with remote URLs)
+        .audioCodec('aac')
+        .outputOptions([
+          '-preset fast',
+          '-crf 23'
+        ])
         .on('end', () => {
           console.log(`✓ Clip exported: ${outputPath}`);
           resolve();

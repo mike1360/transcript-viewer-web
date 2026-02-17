@@ -18,5 +18,8 @@
     "deposition"
   ],
   "author": "Veritext",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "cloudinary": "^2.9.0"
+  }
 }

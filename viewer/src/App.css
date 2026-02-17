@@ -46,12 +46,6 @@
   color: #b4b4b4;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
 .header-stats {
   display: flex;
   gap: 1.5rem;
@@ -264,7 +258,7 @@
 .clip-thumbnail {
   position: relative;
   width: 100%;
-  height: 80px;
+  height: 60px;
   overflow: hidden;
   background: #000;
   cursor: pointer;
@@ -441,6 +435,13 @@
   min-width: fit-content;
 }
 
+.transcript-search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
 .transcript-search {
   padding: 0.5rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -448,7 +449,7 @@
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-size: 0.9rem;
-  min-width: 250px;
+  min-width: 200px;
   flex: 1;
 }
 
@@ -463,34 +464,35 @@
 }
 
 .ai-toggle-btn {
-  background: linear-gradient(135deg, #0071bc 0%, #005a96 100%);
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 113, 188, 0.3);
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .ai-toggle-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 113, 188, 0.5);
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .ai-toggle-btn.active {
-  background: linear-gradient(135deg, #00a86b 0%, #008556 100%);
-  box-shadow: 0 2px 8px rgba(0, 168, 107, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0071bc;
+  border-color: rgba(255, 255, 255, 0.95);
 }
 
 .tess-logo-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
 }
 
@@ -639,6 +641,12 @@
 .transcript-line.current-match {
   background: rgba(217, 119, 6, 0.15);
   border-left-color: #d97706;
+}
+
+.transcript-line.in-clip {
+  background: rgba(16, 185, 129, 0.1);
+  border-left-color: #10b981;
+  box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.1);
 }
 
 /* Text selection styling */

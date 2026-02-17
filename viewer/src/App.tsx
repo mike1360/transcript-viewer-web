@@ -639,21 +639,9 @@ function App() {
             </p>
           </div>
         </div>
-        <div className="header-right">
-          <div className="header-stats">
-            <span>{project.stats.alignedLines}/{project.stats.totalLines} lines synced</span>
-            <span>{project.stats.totalClips} clips</span>
-          </div>
-          <button
-            onClick={() => {
-              setShowAIPanel(!showAIPanel);
-              setAIMode(null);
-            }}
-            className={`ai-toggle-btn ${showAIPanel ? 'active' : ''}`}
-          >
-            <img src="/tess-logo.png" alt="Tess" className="tess-logo-icon" />
-            <span>Ask Tess</span>
-          </button>
+        <div className="header-stats">
+          <span>{project.stats.alignedLines}/{project.stats.totalLines} lines synced</span>
+          <span>{project.stats.totalClips} clips</span>
         </div>
       </header>
 
@@ -751,22 +739,34 @@ function App() {
         <div className="transcript-panel">
           <div className="transcript-header">
             <h3>Transcript</h3>
-            <input
-              type="text"
-              placeholder="Search transcript..."
-              className="transcript-search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchMatches.length > 0 && (
-              <div className="search-nav">
-                <span className="search-count">
-                  {currentSearchIndex + 1} of {searchMatches.length}
-                </span>
-                <button onClick={goToPrevMatch} className="search-btn">↑</button>
-                <button onClick={goToNextMatch} className="search-btn">↓</button>
-              </div>
-            )}
+            <div className="transcript-search-container">
+              <input
+                type="text"
+                placeholder="Search transcript..."
+                className="transcript-search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchMatches.length > 0 && (
+                <div className="search-nav">
+                  <span className="search-count">
+                    {currentSearchIndex + 1} of {searchMatches.length}
+                  </span>
+                  <button onClick={goToPrevMatch} className="search-btn">↑</button>
+                  <button onClick={goToNextMatch} className="search-btn">↓</button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setShowAIPanel(!showAIPanel);
+                setAIMode(null);
+              }}
+              className={`ai-toggle-btn ${showAIPanel ? 'active' : ''}`}
+            >
+              <img src="/tess-logo.png" alt="Tess" className="tess-logo-icon" />
+              <span>Ask Tess</span>
+            </button>
           </div>
 
           <div className="transcript-lines" ref={transcriptRef}>
@@ -774,6 +774,13 @@ function App() {
               const matchIndex = searchMatches.findIndex(m => m.index === index);
               const isSearchMatch = matchIndex !== -1;
               const isCurrentMatch = isSearchMatch && matchIndex === currentSearchIndex;
+
+              // Check if this line is part of the playing clip
+              const isInClip = playingClip &&
+                line.page >= playingClip.start_page &&
+                line.page <= playingClip.end_page &&
+                (line.page > playingClip.start_page || line.line_number >= playingClip.start_line) &&
+                (line.page < playingClip.end_page || line.line_number <= playingClip.end_line);
 
               return (
                 <div
@@ -785,7 +792,9 @@ function App() {
                   data-line-id={line.line_id}
                   className={`transcript-line ${line.start_time !== null ? 'aligned' : 'unaligned'} ${
                     line.line_id === activeLine ? 'active' : ''
-                  } ${isSearchMatch ? 'highlighted' : ''} ${isCurrentMatch ? 'current-match' : ''}`}
+                  } ${isSearchMatch ? 'highlighted' : ''} ${isCurrentMatch ? 'current-match' : ''} ${
+                    isInClip ? 'in-clip' : ''
+                  }`}
                   onClick={() => handleLineClick(line)}
                 >
                   <span className="page-line">{line.page}:{line.line_number}</span>
@@ -962,11 +971,13 @@ function App() {
         )}
 
         {/* Resize Handle - Video/Transcript */}
-        <div
-          className="resize-handle"
-          style={{ left: `${splitPosition}%` }}
-          onMouseDown={handleMouseDown}
-        />
+        {!showAIPanel && (
+          <div
+            className="resize-handle"
+            style={{ left: `${splitPosition}%` }}
+            onMouseDown={handleMouseDown}
+          />
+        )}
       </div>
 
       {/* Selection Toolbar */}
