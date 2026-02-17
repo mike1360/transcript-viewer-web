@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs", "ffmpeg"]
+
+[phases.install]
+cmds = ["cd viewer && npm install && cd .. && cd backend && npm install && cd .."]
+
+[phases.build]
+cmds = ["cd viewer && npm run build && cd .."]
+
+[start]
+cmd = "cd backend && node server.js"

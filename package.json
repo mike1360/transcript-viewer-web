@@ -1,0 +1,22 @@
+{
+  "name": "transcript-viewer-web",
+  "version": "1.0.0",
+  "description": "Transcript Video Viewer for Veritext - View synced depositions",
+  "type": "module",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../viewer && npm install && cd ..",
+    "build": "cd viewer && npm install && npm run build && cd ..",
+    "start": "cd backend && node server.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:viewer": "cd viewer && npm run dev"
+  },
+  "keywords": [
+    "legal",
+    "transcript",
+    "video",
+    "viewer",
+    "deposition"
+  ],
+  "author": "Veritext",
+  "license": "ISC"
+}

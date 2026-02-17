@@ -1,0 +1,10 @@
+[{"key":"name","value":"bfbcnbn"},
+{"key":"transcriptPath","value":"/Users/mikemurray/transcript-video-sync/samples/DepoView Synch Sample/TO SYNC/SK110907.txt"},
+{"key":"videoPath","value":"/Users/mikemurray/transcript-video-sync/samples/DepoView Synch Sample/TO SYNC/SK11092007.mp4"},
+{"key":"createdAt","value":"2026-02-16T18:48:42.187Z"},
+{"key":"caseNumber","value":"BB 91-55538"},
+{"key":"deponentName","value":"STACY KING"},
+{"key":"isAligned","value":"true"},
+{"key":"alignmentDate","value":"2026-02-16T18:58:42.024Z"},
+{"key":"averageConfidence","value":"0.5028230893194405"},
+{"key":"whisperRatio","value":"0.2957041162580079"}]

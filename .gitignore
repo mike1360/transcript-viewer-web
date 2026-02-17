@@ -1,0 +1,15 @@
+node_modules/
+.env
+.DS_Store
+*.log
+backend/node_modules/
+backend/.env
+backend/exports/
+viewer/node_modules/
+viewer/dist/
+viewer/.env
+
+# Large video files (too big for GitHub)
+*.mp4
+sample-video.mp4
+viewer/public/sample-video.mp4
