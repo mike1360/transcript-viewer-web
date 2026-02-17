@@ -267,7 +267,7 @@
 .clip-thumbnail img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .clip-overlay {
@@ -674,6 +674,26 @@
   cursor: pointer;
   user-select: text;
   -webkit-user-select: text;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.transcript-line::-webkit-scrollbar {
+  height: 3px;
+}
+
+.transcript-line::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.transcript-line::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.transcript-line:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .transcript-line.aligned:hover {
@@ -707,6 +727,8 @@
   font-family: 'Courier New', Courier, monospace;
   margin-right: 1rem;
   font-weight: 500;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .speaker {
@@ -714,6 +736,8 @@
   font-weight: bold;
   margin-right: 0.5rem;
   font-family: 'Courier New', Courier, monospace;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .timestamp {
@@ -728,7 +752,7 @@
   line-height: 1.6;
   font-family: 'Courier New', Courier, monospace;
   display: inline;
-  white-space: pre-wrap;
+  white-space: nowrap;
   font-weight: 600;
   user-select: text;
   -webkit-user-select: text;
