@@ -248,6 +248,12 @@
   flex-shrink: 0;
 }
 
+.clips-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .clips-header h3 {
   font-size: 0.9rem;
   font-weight: 600;
@@ -255,6 +261,12 @@
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.clips-stats {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 400;
 }
 
 .btn-stop-clip {

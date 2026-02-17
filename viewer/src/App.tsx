@@ -698,10 +698,6 @@ function App() {
             </p>
           </div>
         </div>
-        <div className="header-stats">
-          <span>{project.stats.alignedLines}/{project.stats.totalLines} lines synced</span>
-          <span>{project.stats.totalClips} clips</span>
-        </div>
       </header>
 
       <div className={`main-content ${showAIPanel ? 'with-tess' : ''}`} style={{
@@ -735,7 +731,12 @@ function App() {
           {project.clips.length > 0 && (
             <div className="clips-section">
               <div className="clips-header">
-                <h3>Clip List</h3>
+                <div className="clips-title-group">
+                  <h3>Clip List</h3>
+                  <span className="clips-stats">
+                    {project.stats.totalClips} clips • {project.stats.alignedLines}/{project.stats.totalLines} synced
+                  </span>
+                </div>
                 {playingClip && (
                   <button onClick={handleStopClip} className="btn-stop-clip">
                     Stop Clip
