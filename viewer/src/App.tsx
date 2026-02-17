@@ -308,8 +308,16 @@ function App() {
     }
   }, [activeLine]);
 
-  // Don't filter - show all lines but highlight matches
-  const filteredLines = project?.transcriptLines || [];
+  // Sort transcript lines by page then line_number to ensure correct order
+  // (prevents "page 40" appearing before "page 4" due to string sorting)
+  const filteredLines = project?.transcriptLines
+    ? [...project.transcriptLines].sort((a, b) => {
+        if (a.page !== b.page) {
+          return a.page - b.page; // Sort by page number
+        }
+        return a.line_number - b.line_number; // Then by line number
+      })
+    : [];
 
   // Find all lines that match the search
   const searchMatches = filteredLines
