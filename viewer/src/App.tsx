@@ -56,8 +56,10 @@ function App() {
   const [aiKeyFacts, setAIKeyFacts] = useState<any[]>([]);
   const [aiLoading, setAILoading] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
-  const [splitPosition, setSplitPosition] = useState(50); // percentage
+  const [splitPosition, setSplitPosition] = useState(50); // horizontal split percentage
   const [isResizing, setIsResizing] = useState(false);
+  const [verticalSplitPosition, setVerticalSplitPosition] = useState(60); // vertical split: video vs clips (percentage)
+  const [isResizingVertical, setIsResizingVertical] = useState(false);
   const [showClipDialog, setShowClipDialog] = useState(false);
   const [clipName, setClipName] = useState('');
   const [editingClip, setEditingClip] = useState<Clip | null>(null);
@@ -600,7 +602,7 @@ function App() {
     }
   };
 
-  // Handle panel resizing
+  // Handle horizontal panel resizing (video/transcript split)
   const handleMouseDown = () => {
     setIsResizing(true);
   };
@@ -633,6 +635,40 @@ function App() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
+
+  // Handle vertical panel resizing (video vs clips)
+  const handleVerticalMouseDown = () => {
+    setIsResizingVertical(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingVertical) return;
+
+      const videoPanel = document.querySelector('.video-panel') as HTMLElement;
+      if (!videoPanel) return;
+
+      const panelRect = videoPanel.getBoundingClientRect();
+      const position = ((e.clientY - panelRect.top) / panelRect.height) * 100;
+
+      // Constrain between 30% and 80%
+      setVerticalSplitPosition(Math.min(Math.max(position, 30), 80));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingVertical(false);
+    };
+
+    if (isResizingVertical) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingVertical]);
 
   if (loading) {
     return (
@@ -674,15 +710,26 @@ function App() {
           : `${splitPosition}fr ${100 - splitPosition}fr`
       }}>
         {/* Video Panel */}
-        <div className="video-panel">
-          <video
-            ref={videoRef}
-            controls
-            onTimeUpdate={handleTimeUpdate}
-            src="https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4"
-          >
-            Your browser does not support video playback.
-          </video>
+        <div className="video-panel" style={{
+          gridTemplateRows: `${verticalSplitPosition}% 8px ${100 - verticalSplitPosition}%`
+        }}>
+          {/* Video Section */}
+          <div className="video-container">
+            <video
+              ref={videoRef}
+              controls
+              onTimeUpdate={handleTimeUpdate}
+              src="https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-video-compressed_gkmwk9.mp4"
+            >
+              Your browser does not support video playback.
+            </video>
+          </div>
+
+          {/* Vertical Resize Handle */}
+          <div
+            className="resize-handle-vertical"
+            onMouseDown={handleVerticalMouseDown}
+          />
 
           {/* Clips Section */}
           {project.clips.length > 0 && (
