@@ -429,9 +429,47 @@
   line-height: 1;
 }
 
-.clip-action-btn:hover {
+.clip-action-btn:hover:not(:disabled) {
   background: #3d3d3d;
   border-color: #0071bc;
+}
+
+.clip-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clip-action-btn.exporting {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.export-status {
+  position: absolute;
+  bottom: -1.5rem;
+  right: 0;
+  font-size: 0.7rem;
+  color: #0071bc;
+  background: rgba(0, 113, 188, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .clip-delete-btn:hover {

@@ -60,6 +60,8 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [verticalSplitPosition, setVerticalSplitPosition] = useState(60); // vertical split: video vs clips (percentage)
   const [isResizingVertical, setIsResizingVertical] = useState(false);
+  const [exportingClips, setExportingClips] = useState<Set<string>>(new Set()); // Track which clips are being exported
+  const [exportStatus, setExportStatus] = useState<{clipId: string; message: string} | null>(null);
   const [showClipDialog, setShowClipDialog] = useState(false);
   const [clipName, setClipName] = useState('');
   const [editingClip, setEditingClip] = useState<Clip | null>(null);
@@ -571,6 +573,10 @@ function App() {
   const handleExportClip = async (clip: Clip, e: React.MouseEvent) => {
     e.stopPropagation();
 
+    // Mark this clip as exporting
+    setExportingClips(prev => new Set(prev).add(clip.clip_id));
+    setExportStatus({ clipId: clip.clip_id, message: 'Preparing export...' });
+
     try {
       const response = await fetch('/api/export-clip', {
         method: 'POST',
@@ -588,6 +594,8 @@ function App() {
         throw new Error('Export failed');
       }
 
+      setExportStatus({ clipId: clip.clip_id, message: 'Downloading...' });
+
       // Get the video file as a blob
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -596,9 +604,21 @@ function App() {
       a.download = `${clip.name.replace(/[^a-z0-9]/gi, '_')}.mp4`;
       a.click();
       URL.revokeObjectURL(url);
+
+      // Success!
+      setExportStatus({ clipId: clip.clip_id, message: '✓ Export complete!' });
+      setTimeout(() => setExportStatus(null), 3000);
     } catch (error) {
       console.error('Export error:', error);
-      alert('Failed to export clip. Please try again.');
+      setExportStatus({ clipId: clip.clip_id, message: '✗ Export failed' });
+      setTimeout(() => setExportStatus(null), 3000);
+    } finally {
+      // Remove from exporting set
+      setExportingClips(prev => {
+        const next = new Set(prev);
+        next.delete(clip.clip_id);
+        return next;
+      });
     }
   };
 
@@ -781,10 +801,11 @@ function App() {
                       </button>
                       <button
                         onClick={(e) => handleExportClip(clip, e)}
-                        className="clip-action-btn"
-                        title="Export"
+                        className={`clip-action-btn ${exportingClips.has(clip.clip_id) ? 'exporting' : ''}`}
+                        title={exportingClips.has(clip.clip_id) ? 'Exporting...' : 'Export'}
+                        disabled={exportingClips.has(clip.clip_id)}
                       >
-                        💾
+                        {exportingClips.has(clip.clip_id) ? '⏳' : '💾'}
                       </button>
                       <button
                         onClick={(e) => {
@@ -797,6 +818,9 @@ function App() {
                         🗑️
                       </button>
                     </div>
+                    {exportStatus?.clipId === clip.clip_id && (
+                      <div className="export-status">{exportStatus.message}</div>
+                    )}
                     {showDeleteConfirm === clip.clip_id && (
                       <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
                         <span>Delete?</span>
