@@ -116,19 +116,47 @@ Focus on finding 3-5 most relevant passages. Be thorough but concise.`,
 
     // Enhance results with timing data from the transcript
     const enhancedResults = results.map(result => {
-      // Find the matching line(s) in the transcript
-      const matchingLines = projectData.transcriptLines.filter(
-        line => line.page === result.page && Math.abs(line.line_number - result.line) <= 3
+      // Find exact line first
+      let matchingLine = projectData.transcriptLines.find(
+        line => line.page === result.page && line.line_number === result.line
       );
 
-      if (matchingLines.length > 0) {
-        const firstLine = matchingLines[0];
-        const lastLine = matchingLines[matchingLines.length - 1];
+      // If exact line has no timing, search nearby (within ±2 lines) for the closest synced line
+      if (!matchingLine || !matchingLine.start_time) {
+        const nearbyLines = projectData.transcriptLines.filter(
+          line => line.page === result.page
+            && Math.abs(line.line_number - result.line) <= 2
+            && line.start_time !== undefined
+            && line.start_time !== null
+        );
+
+        if (nearbyLines.length > 0) {
+          // Sort by distance from target line, take closest
+          nearbyLines.sort((a, b) =>
+            Math.abs(a.line_number - result.line) - Math.abs(b.line_number - result.line)
+          );
+          matchingLine = nearbyLines[0];
+        }
+      }
+
+      // If we have a match, find the end line (3-5 lines after for context)
+      if (matchingLine && matchingLine.start_time) {
+        const contextLines = projectData.transcriptLines.filter(
+          line => line.page === result.page
+            && line.line_number >= matchingLine.line_number
+            && line.line_number <= matchingLine.line_number + 5
+            && line.start_time !== undefined
+            && line.start_time !== null
+        );
+
+        const lastLine = contextLines.length > 0
+          ? contextLines[contextLines.length - 1]
+          : matchingLine;
 
         return {
           ...result,
-          startTime: firstLine.start_time,
-          endTime: lastLine.end_time,
+          startTime: matchingLine.start_time,
+          endTime: lastLine.end_time || matchingLine.end_time,
         };
       }
 
@@ -213,18 +241,47 @@ Order them by importance, most critical first.`,
 
     // Enhance with timing data
     const enhancedKeyFacts = keyFacts.map(fact => {
-      const matchingLines = projectData.transcriptLines.filter(
-        line => line.page === fact.page && Math.abs(line.line_number - fact.line) <= 3
+      // Find exact line first
+      let matchingLine = projectData.transcriptLines.find(
+        line => line.page === fact.page && line.line_number === fact.line
       );
 
-      if (matchingLines.length > 0) {
-        const firstLine = matchingLines[0];
-        const lastLine = matchingLines[matchingLines.length - 1];
+      // If exact line has no timing, search nearby (within ±2 lines) for the closest synced line
+      if (!matchingLine || !matchingLine.start_time) {
+        const nearbyLines = projectData.transcriptLines.filter(
+          line => line.page === fact.page
+            && Math.abs(line.line_number - fact.line) <= 2
+            && line.start_time !== undefined
+            && line.start_time !== null
+        );
+
+        if (nearbyLines.length > 0) {
+          // Sort by distance from target line, take closest
+          nearbyLines.sort((a, b) =>
+            Math.abs(a.line_number - fact.line) - Math.abs(b.line_number - fact.line)
+          );
+          matchingLine = nearbyLines[0];
+        }
+      }
+
+      // If we have a match, find the end line (3-5 lines after for context)
+      if (matchingLine && matchingLine.start_time) {
+        const contextLines = projectData.transcriptLines.filter(
+          line => line.page === fact.page
+            && line.line_number >= matchingLine.line_number
+            && line.line_number <= matchingLine.line_number + 5
+            && line.start_time !== undefined
+            && line.start_time !== null
+        );
+
+        const lastLine = contextLines.length > 0
+          ? contextLines[contextLines.length - 1]
+          : matchingLine;
 
         return {
           ...fact,
-          startTime: firstLine.start_time,
-          endTime: lastLine.end_time,
+          startTime: matchingLine.start_time,
+          endTime: lastLine.end_time || matchingLine.end_time,
         };
       }
 

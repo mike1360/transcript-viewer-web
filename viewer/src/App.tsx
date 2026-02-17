@@ -629,26 +629,38 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="header-left-section">
-          <img src="/veritext-logo.png" alt="Veritext" className="veritext-logo" />
-          <div>
+      <header className="app-header">
+        <div className="header-left">
+          <img src="/veritext-logo.png" alt="Veritext" className="logo" />
+          <div className="header-title">
             <h1>Transcript Video Viewer</h1>
             <p className="case-info">
               {project.metadata.deponentName} - Case {project.metadata.caseNumber}
             </p>
           </div>
         </div>
-        <div className="stats">
-          <span>{project.stats.alignedLines}/{project.stats.totalLines} lines synced</span>
-          <span>{project.stats.totalClips} clips</span>
+        <div className="header-right">
+          <div className="header-stats">
+            <span>{project.stats.alignedLines}/{project.stats.totalLines} lines synced</span>
+            <span>{project.stats.totalClips} clips</span>
+          </div>
+          <button
+            onClick={() => {
+              setShowAIPanel(!showAIPanel);
+              setAIMode(null);
+            }}
+            className={`ai-toggle-btn ${showAIPanel ? 'active' : ''}`}
+          >
+            <img src="/tess-logo.png" alt="Tess" className="tess-logo-icon" />
+            <span>Ask Tess</span>
+          </button>
         </div>
       </header>
 
       <div className={`main-content ${showAIPanel ? 'with-tess' : ''}`} style={{
         gridTemplateColumns: showAIPanel
-          ? `${splitPosition * 0.7}% ${(100 - splitPosition) * 0.7}% 30%`
-          : `${splitPosition}% ${100 - splitPosition}%`
+          ? `${splitPosition}fr ${100 - splitPosition}fr 400px`
+          : `${splitPosition}fr ${100 - splitPosition}fr`
       }}>
         {/* Video Panel */}
         <div className="video-panel">
@@ -672,7 +684,7 @@ function App() {
                   </button>
                 )}
               </div>
-              <div className="clips-list">
+              <div className="clips-grid">
                 {project.clips.map(clip => (
                   <div
                     key={clip.clip_id}
@@ -680,53 +692,40 @@ function App() {
                       playingClip?.clip_id === clip.clip_id ? 'playing' : ''
                     }`}
                   >
-                    <div className="clip-main">
-                      {clipThumbnails[clip.clip_id] && (
-                        <div
-                          className="clip-thumbnail"
-                          onClick={() => handlePlayClip(clip)}
-                        >
-                          <img src={clipThumbnails[clip.clip_id]} alt={clip.name} />
-                          {playingClip?.clip_id === clip.clip_id && (
-                            <div className="thumbnail-playing-indicator">▶</div>
-                          )}
-                        </div>
-                      )}
-                      <div className="clip-info" onClick={() => handlePlayClip(clip)}>
-                        <div className="clip-name">
-                          {clip.name}
-                        </div>
-                        <div className="clip-pages">
-                          Pages {clip.start_page}:{clip.start_line} - {clip.end_page}:{clip.end_line}
-                          <span className="clip-duration"> ({Math.round(clip.end_time - clip.start_time)}s)</span>
-                        </div>
+                    {clipThumbnails[clip.clip_id] && (
+                      <div
+                        className="clip-thumbnail"
+                        onClick={() => handlePlayClip(clip)}
+                      >
+                        <img src={clipThumbnails[clip.clip_id]} alt={clip.name} />
+                        <div className="clip-overlay">▶</div>
                       </div>
-                    </div>
-                    <div className="clip-actions">
-                      <button
-                        onClick={(e) => handleStartRename(clip, e)}
-                        className="clip-action-btn"
-                        title="Rename"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        onClick={(e) => handleExportClip(clip, e)}
-                        className="clip-action-btn"
-                        title="Export"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowDeleteConfirm(clip.clip_id);
-                        }}
-                        className="clip-action-btn clip-delete-btn"
-                        title="Delete"
-                      >
-                        ×
-                      </button>
+                    )}
+                    <div className="clip-info">
+                      <p className="clip-name">{clip.name}</p>
+                      <div className="clip-actions">
+                        <button
+                          onClick={(e) => handleStartRename(clip, e)}
+                          title="Rename"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={(e) => handleExportClip(clip, e)}
+                          title="Export"
+                        >
+                          💾
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteConfirm(clip.clip_id);
+                          }}
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                     {showDeleteConfirm === clip.clip_id && (
                       <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
@@ -752,34 +751,22 @@ function App() {
         <div className="transcript-panel">
           <div className="transcript-header">
             <h3>Transcript</h3>
-            <button
-              onClick={() => {
-                setShowAIPanel(!showAIPanel);
-                setAIMode(null);
-              }}
-              className={`ai-toggle-btn ${showAIPanel ? 'active' : ''}`}
-            >
-              <img src="/tess-logo.png" alt="Tess" className="tess-logo-icon" />
-              <span>Ask Tess</span>
-            </button>
-            <div className="search-box">
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Search transcript..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchMatches.length > 0 && (
-                <div className="search-nav">
-                  <span className="search-count">
-                    {currentSearchIndex + 1} of {searchMatches.length}
-                  </span>
-                  <button onClick={goToPrevMatch} className="search-btn">↑</button>
-                  <button onClick={goToNextMatch} className="search-btn">↓</button>
-                </div>
-              )}
-            </div>
+            <input
+              type="text"
+              placeholder="Search transcript..."
+              className="transcript-search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchMatches.length > 0 && (
+              <div className="search-nav">
+                <span className="search-count">
+                  {currentSearchIndex + 1} of {searchMatches.length}
+                </span>
+                <button onClick={goToPrevMatch} className="search-btn">↑</button>
+                <button onClick={goToNextMatch} className="search-btn">↓</button>
+              </div>
+            )}
           </div>
 
           <div className="transcript-lines" ref={transcriptRef}>
