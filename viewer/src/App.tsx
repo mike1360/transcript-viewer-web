@@ -383,9 +383,18 @@ function App() {
     ).join('');
   };
 
-  // Play clip
+  // Play clip (toggle: click again to deselect)
   const handlePlayClip = (clip: Clip) => {
     if (videoRef.current) {
+      // If same clip is clicked, deselect and stop
+      if (selectedClip?.clip_id === clip.clip_id) {
+        videoRef.current.pause();
+        setSelectedClip(null);
+        setPlayingClip(null);
+        return;
+      }
+
+      // Otherwise, play new clip
       setSelectedClip(clip);
       setPlayingClip(clip);
       videoRef.current.currentTime = clip.start_time;
@@ -470,7 +479,7 @@ function App() {
 
     const newClip: Clip = {
       clip_id: `clip_${Date.now()}`,
-      name: `AI Result - ${result.match}% match`,
+      name: `Page${firstLine.page}_Lines${firstLine.line_number}-${lastLine.line_number}`,
       start_page: firstLine.page,
       end_page: lastLine.page,
       start_line: firstLine.line_number,
@@ -496,6 +505,7 @@ function App() {
     if (videoRef.current) {
       videoRef.current.pause();
       setPlayingClip(null);
+      setSelectedClip(null);
     }
   };
 
