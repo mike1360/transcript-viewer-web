@@ -1,6 +1,6 @@
 # Transcript Video Viewer
 
-AI-powered legal deposition viewer with video-transcript synchronization, intelligent search, and behavioral analysis.
+AI-powered legal deposition viewer with video-transcript synchronization and intelligent search.
 
 **Live Demo:** https://transcript-video-sync-production.up.railway.app
 
@@ -72,7 +72,6 @@ http://localhost:5173
 ### AI Features (Tess Panel)
 - **Smart Search** - Natural language queries with GPT-4 ("Find attorney-client privilege mentions")
 - **Key Facts** - AI identifies 5-10 most important testimony moments
-- **Behavioral Analysis** ⭐ *NEW* - Video analysis of witness body language, facial expressions, demeanor
 
 ### Export Features
 - Burn-in captions (transcript text on video)
@@ -142,7 +141,6 @@ PORT=3001                           # Server port (default: 3001)
 **Cost estimates:**
 - AI Search: ~$0.01-0.03 per query
 - Key Facts: ~$0.10 per deposition
-- Behavioral Analysis: ~$4 per deposition (8 frames)
 
 ---
 
@@ -157,11 +155,10 @@ PORT=3001                           # Server port (default: 3001)
 5. ✅ Click "Ask Tess" → AI panel opens
 6. ✅ Try AI Search: "attorney-client relationship"
 7. ✅ Generate Key Facts → shows important moments
-8. ✅ Click "Behavior" tab → analyze deposition
-9. ✅ Shift+click transcript range → create clip
-10. ✅ Export clip → downloads MP4
-11. ✅ Select multiple clips → bulk export
-12. ✅ Toggle captions → exports with text overlay
+8. ✅ Shift+click transcript range → create clip
+9. ✅ Export clip → downloads MP4
+10. ✅ Select multiple clips → bulk export
+11. ✅ Toggle captions → exports with text overlay
 
 ---
 
@@ -271,12 +268,7 @@ curl -I https://res.cloudinary.com/dpunimzip/video/upload/v1771306141/sample-vid
 - "Find mentions of attorney-client privilege"
 - Returns page:line references with video timestamps
 
-**Wow Factor 3:** Behavioral Analysis ⭐
-- Analyzes witness body language and demeanor
-- Identifies stress, confidence, deception indicators
-- **UNIQUE: No competitors have this!**
-
-**Wow Factor 4:** Professional clip export
+**Wow Factor 3:** Professional clip export
 - Select 5 clips → bulk export with captions
 - Real-time progress bar
 - Trial-ready MP4 output

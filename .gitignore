@@ -5,6 +5,7 @@ node_modules/
 backend/node_modules/
 backend/.env
 backend/exports/
+backend/temp-frames/
 viewer/node_modules/
 viewer/dist/
 viewer/.env
