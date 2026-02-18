@@ -50,10 +50,11 @@ function App() {
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
   const [playingClip, setPlayingClip] = useState<Clip | null>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [aiMode, setAIMode] = useState<'search' | 'summary' | null>(null);
+  const [aiMode, setAIMode] = useState<'search' | 'summary' | 'behavior' | null>(null);
   const [aiQuery, setAIQuery] = useState('');
   const [aiResults, setAIResults] = useState<any[]>([]);
   const [aiKeyFacts, setAIKeyFacts] = useState<any[]>([]);
+  const [behavioralAnalysis, setBehavioralAnalysis] = useState<any[]>([]);
   const [aiLoading, setAILoading] = useState(false);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [splitPosition, setSplitPosition] = useState(50); // horizontal split percentage
@@ -474,6 +475,63 @@ function App() {
     } catch (error) {
       console.error('AI key facts error:', error);
       alert('Failed to generate key facts. Please try again.');
+    } finally {
+      setAILoading(false);
+    }
+  };
+
+  // Behavioral Analysis - Deposition-focused
+  const handleAnalyzeBehavior = async () => {
+    if (!project) return;
+
+    setAIMode('behavior');
+    setShowAIPanel(true);
+    setBehavioralAnalysis([]);
+    setAILoading(true);
+
+    try {
+      // Sample timestamps from key facts if available, otherwise sample every 3 minutes
+      let timestamps: number[] = [];
+
+      if (aiKeyFacts.length > 0) {
+        // Use key facts timestamps
+        timestamps = aiKeyFacts
+          .filter(fact => fact.startTime)
+          .map(fact => fact.startTime)
+          .slice(0, 8); // Limit to 8 analyses to control cost
+      } else {
+        // Sample every 3 minutes across video duration
+        const duration = videoRef.current?.duration || 2000;
+        const interval = 180; // 3 minutes
+        for (let t = 60; t < duration; t += interval) {
+          timestamps.push(t);
+          if (timestamps.length >= 8) break;
+        }
+      }
+
+      console.log('Analyzing deposition behavior at timestamps:', timestamps);
+
+      const response = await fetch('/api/analyze-behavior', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ timestamps }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Behavioral analysis failed');
+      }
+
+      const data = await response.json();
+      setBehavioralAnalysis(data.analyses || []);
+
+      if (data.analyses && data.analyses.length === 0) {
+        alert('No notable behavioral moments found in the analyzed frames. Try generating Key Facts first for better timestamp selection.');
+      }
+    } catch (error) {
+      console.error('Behavioral analysis error:', error);
+      alert('Failed to analyze behavior. Please try again.');
     } finally {
       setAILoading(false);
     }
@@ -1046,6 +1104,12 @@ function App() {
                   >
                     Key Facts
                   </button>
+                  <button
+                    onClick={() => setAIMode('behavior')}
+                    className={`ai-tab ${aiMode === 'behavior' ? 'active' : ''}`}
+                  >
+                    Behavior
+                  </button>
                 </div>
 
                 {aiMode === 'search' && (
@@ -1070,6 +1134,17 @@ function App() {
                     {aiLoading ? 'Analyzing...' : 'Generate Key Facts'}
                   </button>
                 )}
+
+                {aiMode === 'behavior' && (
+                  <div className="ai-behavior-controls">
+                    <p className="behavior-description">
+                      AI-powered analysis of witness credibility, demeanor, and body language during deposition testimony.
+                    </p>
+                    <button onClick={handleAnalyzeBehavior} className="ai-behavior-btn" disabled={aiLoading}>
+                      {aiLoading ? 'Analyzing Behavior...' : 'Analyze Deposition'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {aiLoading && (
@@ -1078,6 +1153,7 @@ function App() {
                   <p>
                     {aiMode === 'search' && 'Searching with AI...'}
                     {aiMode === 'summary' && 'Generating key facts...'}
+                    {aiMode === 'behavior' && 'Analyzing witness behavior and credibility...'}
                   </p>
                 </div>
               )}
@@ -1201,6 +1277,67 @@ function App() {
                 </div>
               )}
 
+              {!aiLoading && aiMode === 'behavior' && behavioralAnalysis.length > 0 && (
+                <div className="ai-results">
+                  <h4>Behavioral Analysis ({behavioralAnalysis.length} notable moments)</h4>
+                  <div className="behavior-disclaimer">
+                    ⚠️ <strong>Legal Disclaimer:</strong> This AI analysis is for reference only and should not be considered expert testimony.
+                    Behavioral indicators do not definitively prove truthfulness or deception. Cultural differences, medical conditions,
+                    and neurodivergence can affect body language. Consult with qualified behavioral analysts or psychologists for expert opinions.
+                  </div>
+                  {behavioralAnalysis.map((analysis, i) => (
+                    <div key={i} className="behavior-card">
+                      <div className="behavior-header">
+                        <span className="behavior-timestamp">
+                          {Math.floor(analysis.timestamp / 60)}:{(analysis.timestamp % 60).toFixed(0).padStart(2, '0')}
+                        </span>
+                        <span className={`behavior-confidence ${analysis.confidence}`}>
+                          {analysis.confidence} confidence
+                        </span>
+                      </div>
+                      {analysis.frameUrl && (
+                        <img src={analysis.frameUrl} alt="Video frame" className="behavior-frame" />
+                      )}
+                      <p className="behavior-summary">{analysis.summary}</p>
+                      {analysis.legal_relevance && (
+                        <p className="behavior-legal-relevance">
+                          <strong>Legal Relevance:</strong> {analysis.legal_relevance}
+                        </p>
+                      )}
+                      {analysis.indicators && analysis.indicators.length > 0 && (
+                        <div className="behavior-indicators">
+                          <strong>Observed Behaviors:</strong>
+                          <ul>
+                            {analysis.indicators.map((indicator: any, idx: number) => (
+                              <li key={idx} className={`indicator-${indicator.type}`}>
+                                <span className={`indicator-badge ${indicator.type}`}>
+                                  {indicator.type === 'positive' && '✓'}
+                                  {indicator.type === 'negative' && '!'}
+                                  {indicator.type === 'neutral' && '○'}
+                                </span>
+                                {indicator.description}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="behavior-actions">
+                        <button
+                          onClick={() => {
+                            if (videoRef.current) {
+                              videoRef.current.currentTime = analysis.timestamp;
+                              videoRef.current.play();
+                            }
+                          }}
+                          className="ai-action-btn"
+                        >
+                          Play Video
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         )}
 

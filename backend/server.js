@@ -437,6 +437,129 @@ app.post('/api/export-clip', async (req, res) => {
   }
 });
 
+// Behavioral Analysis endpoint - Deposition-focused
+app.post('/api/analyze-behavior', async (req, res) => {
+  try {
+    const { timestamps } = req.body;
+
+    if (!timestamps || !Array.isArray(timestamps) || timestamps.length === 0) {
+      return res.status(400).json({ error: 'Missing timestamps array' });
+    }
+
+    console.log(`Analyzing deposition behavior at ${timestamps.length} timestamps...`);
+
+    const analyses = [];
+
+    for (const timestamp of timestamps) {
+      // Create a frame URL (Cloudinary can generate video thumbnails)
+      const frameUrl = `https://res.cloudinary.com/dpunimzip/video/upload/so_${Math.floor(timestamp)}.0/sample-video-compressed_gkmwk9.jpg`;
+
+      try {
+        // Use GPT-4 Vision to analyze the frame
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert behavioral analyst specializing in legal depositions. You are analyzing VIDEO FRAMES from a witness deposition to help attorneys assess credibility and demeanor.
+
+CONTEXT: This is a legal deposition where witness credibility and truthfulness are critical.
+
+FOCUS ON DEPOSITION-RELEVANT BEHAVIORS:
+- Credibility indicators (eye contact, facial expressions, consistency)
+- Stress markers (tension, fidgeting, defensive postures)
+- Confidence vs. uncertainty (posture, gestures, engagement)
+- Evasiveness or discomfort (avoiding gaze, closed body language)
+- Engagement level (attentive vs. disconnected)
+
+IMPORTANT: Only analyze frames where you observe NOTABLE or LEGALLY RELEVANT behavior. If the frame shows nothing significant (witness sitting still, neutral expression, poor quality frame), return null.
+
+When you DO find notable behavior, return a detailed JSON object:
+{
+  "notable": true,
+  "summary": "3-4 sentence detailed objective description of what you observe and why it matters for credibility assessment",
+  "indicators": [
+    {"type": "positive/negative/neutral", "description": "Specific observable behavior with legal relevance"},
+    {"type": "positive/negative/neutral", "description": "Another specific behavior"},
+    {"type": "positive/negative/neutral", "description": "At least 3 specific observations"}
+  ],
+  "confidence": "high/medium/low",
+  "legal_relevance": "Brief note on why this moment might be important for an attorney"
+}
+
+If nothing notable: {"notable": false}
+
+Type meanings for attorneys:
+- positive = Credibility indicators (eye contact, openness, confidence)
+- negative = Concern markers (evasiveness, stress, defensiveness)
+- neutral = Observable but ambiguous behaviors`
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this deposition witness at timestamp ${Math.floor(timestamp / 60)}:${(timestamp % 60).toFixed(0).padStart(2, '0')}. Is there anything legally relevant or notable happening?`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: frameUrl
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 600,
+          temperature: 0.2
+        });
+
+        const aiResponse = completion.choices[0].message.content;
+
+        // Try to parse JSON response
+        let analysis = null;
+        try {
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysis = JSON.parse(jsonMatch[0]);
+          }
+        } catch (parseErr) {
+          console.error('Failed to parse behavior analysis:', parseErr);
+          continue; // Skip this frame if parsing fails
+        }
+
+        // Only include if notable
+        if (analysis && analysis.notable !== false) {
+          analyses.push({
+            timestamp,
+            summary: analysis.summary || 'Notable behavior observed',
+            indicators: analysis.indicators || [],
+            confidence: analysis.confidence || 'medium',
+            legal_relevance: analysis.legal_relevance || '',
+            frameUrl
+          });
+          console.log(`✓ Notable behavior at ${timestamp}s`);
+        } else {
+          console.log(`- Skipped ${timestamp}s (not notable)`);
+        }
+
+      } catch (frameError) {
+        console.error(`Failed to analyze frame at ${timestamp}:`, frameError.message);
+        // Continue with other frames even if one fails
+      }
+
+      // Small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    console.log(`✓ Analysis complete: ${analyses.length}/${timestamps.length} notable moments`);
+    res.json({ analyses });
+  } catch (error) {
+    console.error('Behavioral analysis error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
