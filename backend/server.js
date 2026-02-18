@@ -449,8 +449,11 @@ app.post('/api/analyze-behavior', async (req, res) => {
     console.log(`Analyzing deposition behavior at ${timestamps.length} timestamps...`);
 
     const analyses = [];
+    let frameIndex = 0;
 
     for (const timestamp of timestamps) {
+      frameIndex++;
+
       // Create a frame URL (Cloudinary can generate video thumbnails)
       const frameUrl = `https://res.cloudinary.com/dpunimzip/video/upload/so_${Math.floor(timestamp)}.0/sample-video-compressed_gkmwk9.jpg`;
 
@@ -461,36 +464,27 @@ app.post('/api/analyze-behavior', async (req, res) => {
           messages: [
             {
               role: 'system',
-              content: `You are an expert behavioral analyst specializing in legal depositions. You are analyzing VIDEO FRAMES from a witness deposition to help attorneys assess credibility and demeanor.
+              content: `You are an expert behavioral analyst specializing in legal depositions. Analyze witness body language and demeanor from this deposition video frame.
 
-CONTEXT: This is a legal deposition where witness credibility and truthfulness are critical.
-
-FOCUS ON DEPOSITION-RELEVANT BEHAVIORS:
-- Credibility indicators (eye contact, facial expressions, consistency)
+FOCUS ON:
+- Credibility indicators (eye contact, facial expressions)
 - Stress markers (tension, fidgeting, defensive postures)
-- Confidence vs. uncertainty (posture, gestures, engagement)
+- Confidence vs. uncertainty (posture, gestures)
 - Evasiveness or discomfort (avoiding gaze, closed body language)
-- Engagement level (attentive vs. disconnected)
 
-IMPORTANT: Only analyze frames where you observe NOTABLE or LEGALLY RELEVANT behavior. If the frame shows nothing significant (witness sitting still, neutral expression, poor quality frame), return null.
-
-When you DO find notable behavior, return a detailed JSON object:
+Return a JSON object:
 {
-  "notable": true,
-  "summary": "3-4 sentence detailed objective description of what you observe and why it matters for credibility assessment",
+  "summary": "1-2 sentence concise observation focusing on credibility and demeanor",
   "indicators": [
-    {"type": "positive/negative/neutral", "description": "Specific observable behavior with legal relevance"},
+    {"type": "positive/negative/neutral", "description": "Specific observable behavior"},
     {"type": "positive/negative/neutral", "description": "Another specific behavior"},
-    {"type": "positive/negative/neutral", "description": "At least 3 specific observations"}
+    {"type": "positive/negative/neutral", "description": "At least 3 observations"}
   ],
-  "confidence": "high/medium/low",
-  "legal_relevance": "Brief note on why this moment might be important for an attorney"
+  "confidence": "high/medium/low"
 }
 
-If nothing notable: {"notable": false}
-
-Type meanings for attorneys:
-- positive = Credibility indicators (eye contact, openness, confidence)
+Type meanings:
+- positive = Credibility indicators (eye contact, confidence, openness)
 - negative = Concern markers (evasiveness, stress, defensiveness)
 - neutral = Observable but ambiguous behaviors`
             },
@@ -499,7 +493,7 @@ Type meanings for attorneys:
               content: [
                 {
                   type: 'text',
-                  text: `Analyze this deposition witness at timestamp ${Math.floor(timestamp / 60)}:${(timestamp % 60).toFixed(0).padStart(2, '0')}. Is there anything legally relevant or notable happening?`
+                  text: `Analyze this deposition witness at ${Math.floor(timestamp / 60)}:${(timestamp % 60).toFixed(0).padStart(2, '0')}`
                 },
                 {
                   type: 'image_url',
@@ -510,7 +504,7 @@ Type meanings for attorneys:
               ]
             }
           ],
-          max_tokens: 600,
+          max_tokens: 400,
           temperature: 0.2
         });
 
@@ -528,19 +522,18 @@ Type meanings for attorneys:
           continue; // Skip this frame if parsing fails
         }
 
-        // Only include if notable
-        if (analysis && analysis.notable !== false) {
+        // Always include first 5 results, then be selective
+        if (analysis && (analyses.length < 5 || analysis.notable !== false)) {
           analyses.push({
             timestamp,
             summary: analysis.summary || 'Notable behavior observed',
             indicators: analysis.indicators || [],
             confidence: analysis.confidence || 'medium',
-            legal_relevance: analysis.legal_relevance || '',
             frameUrl
           });
-          console.log(`✓ Notable behavior at ${timestamp}s`);
+          console.log(`✓ Analyzed timestamp ${timestamp}s (${analyses.length})`);
         } else {
-          console.log(`- Skipped ${timestamp}s (not notable)`);
+          console.log(`- Skipped ${timestamp}s (not notable, already have 5+)`);
         }
 
       } catch (frameError) {

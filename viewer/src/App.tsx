@@ -1299,11 +1299,6 @@ function App() {
                         <img src={analysis.frameUrl} alt="Video frame" className="behavior-frame" />
                       )}
                       <p className="behavior-summary">{analysis.summary}</p>
-                      {analysis.legal_relevance && (
-                        <p className="behavior-legal-relevance">
-                          <strong>Legal Relevance:</strong> {analysis.legal_relevance}
-                        </p>
-                      )}
                       {analysis.indicators && analysis.indicators.length > 0 && (
                         <div className="behavior-indicators">
                           <strong>Observed Behaviors:</strong>
